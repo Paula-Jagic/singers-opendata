@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="hr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tablica Podataka - Pop Pjevači</title>
+    <style>
+    body { 
+        font-family: Arial, sans-serif; 
+        margin: 20px; 
+    }
+    
+    .search-form { 
+        margin: 20px 0; 
+    }
+    
+    .search-form input, .search-form select { 
+        padding: 8px; 
+        margin: 5px; 
+        border: 1px solid #ccc; 
+    }
+    
+    .search-form button { 
+        padding: 8px 15px; 
+        background: #e0218a; 
+        color: white; 
+        border: none; 
+        cursor: pointer; 
+    }
+    
+    table { 
+        width: 100%; 
+        border-collapse: collapse; 
+        margin: 20px 0;
+        border: 1px solid #e0218a;
+    }
+    
+    th, td { 
+        border: 1px solid #e0218a; 
+        padding: 8px; 
+    }
+    
+    th { 
+        background: #e0218a; 
+        color: white; 
+    }
+    
+    .download-buttons { 
+        margin: 20px 0; 
+    }
+    
+    .download-buttons button { 
+        padding: 10px 15px; 
+        margin: 5px; 
+        background: #e0218a; 
+        color: white; 
+        border: none; 
+        cursor: pointer; 
+    }
+    
+    .loading { 
+        display: none; 
+        color: #e0218a;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <h1> Tablica Podataka: Pop Pjevači</h1>
+        <a href="index.html">← Povratak na početnu</a>
+    </header>
+
+    <div class="search-form">
+        <h3> Pretraživanje podataka</h3>
+        <form id="searchForm">
+            <input type="text" id="searchInput" placeholder="Unesite tekst za pretragu...">
+            <select id="attributeSelect">
+    <option value="all">Svi atributi</option>
+    
+
+    <option value="ime_prezime">Ime i prezime</option>
+    <option value="nadimak">Nadimak</option>
+    <option value="datum_rodjenja">Datum rođenja</option>
+    <option value="mjesto_rodjenja">Mjesto rođenja</option>
+    <option value="drzava_podrijetla">Država podrijetla</option>
+    <option value="zanr">Žanr</option>
+    <option value="aktivan_od">Aktivan od</option>
+    <option value="broj_albuma">Broj albuma</option>
+    <option value="broj_nagrada">Broj nagrada</option>
+    <option value="najpoznatije_pjesma">Najpoznatija pjesma</option>
+    
+    
+    <option value="naziv_albuma">Naziv albuma</option>
+    <option value="godina_izdanja">Godina izdanja albuma</option>
+    <option value="izdavacka_kuca">Izdavačka kuća albuma</option>
+    <option value="trajanje_minuta">Trajanje albuma (min)</option>
+    <option value="broj_pjesama">Broj pjesama na albumu</option>
+</select>
+            <button type="submit">Pretraži</button>
+            <button type="button" id="resetBtn">Poništi filter</button>
+        </form>
+    </div>
+
+    <div class="download-buttons">
+        <button id="downloadCsv"> Preuzmi CSV (trenutni prikaz)</button>
+        <button id="downloadJson"> Preuzmi JSON (trenutni prikaz)</button>
+    </div>
+
+   
+    
+    <div id="tableContainer">
+<div id="loading" class="loading">⏳ Učitavanje podataka...</div>
+       
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
