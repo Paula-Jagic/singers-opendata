@@ -9,8 +9,8 @@ Ovaj skup podataka sadrži informacije o 10 najpopularnijih međunarodnih pop pj
 2. **Autor**: Paula Jagić
 3. **Verzija**: 1.0
 4. **Jezik**: Hrvatski
-5. **Datum kreiranja**: 21.10.2024.
-6. **Posljednje ažuriranje**: 21.10.2024.
+5. **Datum kreiranja**: 21.10.2025.
+6. **Posljednje ažuriranje**: 3.11.2025.
 7. **Svrha skupa**: Edukativna svrha za laboratorijsku vježbu
 8. **Izvor podataka**: Ručno prikupljeni podaci iz javno dostupnih izvora (Wikipedia, službene stranice)
 9. **Frekvencija ažuriranja**: Jednokratno
@@ -41,4 +41,5 @@ Skup podataka sadrži roditelj-dijete vezu gdje je pjevač roditelj, a albumi su
 
 ## Format podataka
 - **singers.csv**: 13 redaka, 15 stupaca (format: UTF-8)
+
 - **singers.json**: 10 objekata s hijerarhijskom strukturom (format: UTF-8)
