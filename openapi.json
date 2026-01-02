@@ -1,0 +1,140 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Singers API",
+    "description": "RESTful API za upravljanje pjevačima i njihovim albumima.",
+    "version": "1.0.0",
+    "contact": { "name": "Paula Jagić" },
+    "license": { "name": "Creative Commons Attribution 4.0", "url": "https://creativecommons.org/licenses/by/4.0/" }
+  },
+  "paths": {
+    "/api/v1/pjevaci": {
+      "get": {
+        "summary": "Dohvati sve pjevače",
+        "description": "Vraća sve pjevače s pripadajućim albumima.",
+        "responses": {
+          "200": { "description": "Uspješno dohvaćeni svi pjevači" },
+          "500": { "description": "Internal server error" }
+        }
+      },
+      "post": {
+        "summary": "Dodaj novog pjevača",
+        "description": "Ubacuje novog pjevača u bazu.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ime_prezime": { "type": "string" },
+                  "nadimak": { "type": "string" },
+                  "datum_rodjenja": { "type": "string", "format": "date" },
+                  "mjesto_rodjenja": { "type": "string" },
+                  "zanr": { "type": "string" },
+                  "aktivan_od": { "type": "integer" },
+                  "broj_nagrada": { "type": "integer" },
+                  "broj_albuma": { "type": "integer" },
+                  "najpoznatije_pjesma": { "type": "string" },
+                  "drzava_podrijetla": { "type": "string" }
+                },
+                "required": ["ime_prezime", "zanr"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Singer created successfully" },
+          "409": { "description": "Singer already exists" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/api/v1/pjevaci/{id}": {
+      "get": {
+        "summary": "Dohvati pjevača po ID-u",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Fetched singer" },
+          "404": { "description": "Singer not found" },
+          "500": { "description": "Internal server error" }
+        }
+      },
+      "put": {
+        "summary": "Ažuriraj pjevača po ID-u",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "ime_prezime": { "type": "string" },
+                  "nadimak": { "type": "string" },
+                  "datum_rodjenja": { "type": "string", "format": "date" },
+                  "mjesto_rodjenja": { "type": "string" },
+                  "zanr": { "type": "string" },
+                  "aktivan_od": { "type": "integer" },
+                  "broj_nagrada": { "type": "integer" },
+                  "broj_albuma": { "type": "integer" },
+                  "najpoznatije_pjesma": { "type": "string" },
+                  "drzava_podrijetla": { "type": "string" }
+                },
+                "required": ["ime_prezime", "zanr"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Singer updated successfully" },
+          "404": { "description": "Singer not found" },
+          "500": { "description": "Internal server error" }
+        }
+      },
+      "delete": {
+        "summary": "Obriši pjevača po ID-u",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Singer deleted successfully" },
+          "404": { "description": "Singer not found" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/api/v1/pjevaci/zanr/{zanr}": {
+      "get": {
+        "summary": "Dohvati pjevače po žanru",
+        "parameters": [{ "name": "zanr", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "responses": {
+          "200": { "description": "Fetched singers by genre" },
+          "404": { "description": "No singers found for this genre" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/api/v1/albumi/godina/{godina}": {
+      "get": {
+        "summary": "Dohvati albume po godini izdanja",
+        "parameters": [{ "name": "godina", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Fetched albums by year" },
+          "404": { "description": "No albums found for this year" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/api/v1/pjevaci/aktivni_od/{godina}": {
+      "get": {
+        "summary": "Dohvati pjevače aktivne od određene godine",
+        "parameters": [{ "name": "godina", "in": "path", "required": true, "schema": { "type": "integer" } }],
+        "responses": {
+          "200": { "description": "Fetched singers active from year" },
+          "404": { "description": "No singers found active from this year" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    }
+  }
+}
+
