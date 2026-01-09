@@ -2,18 +2,46 @@ const express = require('express');
 const { Pool } = require('pg');
 const cors = require('cors');
 const path = require('path');
-const fs = require('fs');
+
+require('dotenv').config();
+const session = require('express-session');
+const { auth, requiresAuth } = require('express-openid-connect');
 
 const app = express();
 const PORT = 3000;
 
 
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'your-secret-key-123',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 1000 * 60 * 60 * 24
+  }
+}));
+
+
 app.use(cors());
 app.use(express.json());
-app.use(express.static('public'));
+
+
+app.use(
+  auth({
+    authRequired: false,
+    auth0Logout: true,
+    secret: process.env.AUTH0_SECRET,
+    baseURL: process.env.AUTH0_BASE_URL,
+    clientID: process.env.AUTH0_CLIENT_ID,
+    issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL
+    
+  })
+);
+
+
+app.use(express.static('public', { index: false }));
 app.use(express.static(__dirname));
-
-
 const pool = new Pool({
   user: 'postgres',          
   host: 'localhost',
@@ -23,7 +51,265 @@ const pool = new Pool({
 });
 
 
+app.get('/', (req, res) => {
+  console.log('Root route - isAuthenticated:', req.oidc.isAuthenticated());
+  
+  if (req.oidc.isAuthenticated()) {
+    // Ako je već prijavljen, idi na home
+    res.redirect('/home');
+  } else {
+    // Ako nije prijavljen, pokaži login
+    res.sendFile(path.join(__dirname, 'public', 'login.html'));
+  }
+});
 
+app.get('/login', (req, res) => {
+  const returnTo = req.query.returnTo || '/home';
+  res.oidc.login({
+    returnTo: returnTo
+  });
+});
+
+// Potpuna odjava
+app.get('/logout-complete', (req, res) => {
+  res.oidc.logout({
+    returnTo: process.env.AUTH0_BASE_URL
+  });
+});
+// Ruta za HTML stranicu profila
+app.get('/profile-page', requiresAuth(), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'profile-page.html'));
+});
+
+// API ruta za dobivanje podataka 
+app.get('/api/profile-data', requiresAuth(), (req, res) => {
+  const user = req.oidc.user;
+  
+  res.json({
+    status: "OK",
+    message: "Podaci dohvaćeni iz OpenID objekta",
+    user: {
+      sub: user.sub,
+      name: user.name,
+      email: user.email,
+      nickname: user.nickname,
+      
+    }
+  });
+});
+
+app.get('/home', requiresAuth(), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+app.get('/datatable', requiresAuth(), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'datatable.html'));
+});
+app.get('/debug-user', requiresAuth(), (req, res) => {
+  console.log('CIJELI user objekt:', JSON.stringify(req.oidc.user, null, 2));
+  
+  res.json({
+    raw_user_object: req.oidc.user,
+    available_properties: Object.keys(req.oidc.user)
+  });
+});
+
+app.get('/export', requiresAuth(), (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'export.html'));
+});
+
+
+app.get('/export/csv', requiresAuth(), async (req, res) => {
+  try {
+    // 1. Dohvati podatke s albumima - PRILAGOĐENI QUERY
+    const query = `
+      SELECT 
+        p.*,
+        json_agg(
+          json_build_object(
+            'naziv_albuma', a.naziv_albuma,
+            'godina_izdanja', a.godina_izdanja,
+            'izdavacka_kuca', a.izdavacka_kuca,
+            'broj_pjesama', a.broj_pjesama,
+            'trajanje_minuta', a.trajanje_minuta
+          )
+        ) as albumi
+      FROM pjevaci p
+      LEFT JOIN albumi a ON p.id = a.pjevac_id
+      GROUP BY p.id
+      ORDER BY p.ime_prezime
+    `;
+    
+    const result = await pool.query(query);
+    const data = result.rows;
+    
+    // 2. Kreiraj CSV content s atributima
+    let csvContent = '';
+    
+    // CSV header - atributi iz pjevaci tablice
+    const baseHeaders = [
+      'id', 
+      'ime_prezime', 
+      'nadimak', 
+      'datum_rodjenja', 
+      'mjesto_rodjenja', 
+      'zanr', 
+      'aktivan_od', 
+      'broj_nagrada',
+      'broj_albuma', 
+      'najpoznatije_pjesma', 
+      'drzava_podrijetla'
+    ];
+    
+    // Dodaj kolone za albume (max 2 albuma za jednostavnost)
+    const albumHeaders = [];
+    for (let i = 1; i <= 2; i++) {
+      albumHeaders.push(
+        `album_${i}_naziv`, 
+        `album_${i}_godina`, 
+        `album_${i}_izdavac`,
+        `album_${i}_broj_pjesama`,
+        `album_${i}_trajanje_minuta`
+      );
+    }
+    
+    const headers = [...baseHeaders, ...albumHeaders];
+    csvContent += headers.join(',') + '\n';
+    
+    // 3. CSV rows
+    data.forEach(row => {
+      const csvRow = [];
+      
+      // Osnovni podaci - atributi
+      baseHeaders.forEach(header => {
+        let value = row[header];
+        
+        // Formatiraj datum ako postoji
+        if (header === 'datum_rodjenja' && value) {
+          value = new Date(value).toISOString().split('T')[0]; // YYYY-MM-DD
+        }
+        
+        csvRow.push(formatForCsv(value));
+      });
+      
+      // Album podaci
+      const albumi = row.albumi || [];
+      for (let i = 0; i < 2; i++) {
+        if (albumi[i] && albumi[i].naziv_albuma) {
+          // Sve  atribute albuma
+          csvRow.push(formatForCsv(albumi[i].naziv_albuma));
+          csvRow.push(formatForCsv(albumi[i].godina_izdanja));
+          csvRow.push(formatForCsv(albumi[i].izdavacka_kuca));
+          csvRow.push(formatForCsv(albumi[i].broj_pjesama));
+          csvRow.push(formatForCsv(albumi[i].trajanje_minuta));
+        } else {
+          // Prazno ako nema albuma
+          csvRow.push('', '', '', '', '');
+        }
+      }
+      
+      csvContent += csvRow.join(',') + '\n';
+    });
+    
+    // 4. Pošalji kao download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename="pjevaci_s_albumima.csv"');
+    res.send(csvContent);
+    
+    console.log(` CSV export uspješan: ${data.length} pjevača`);
+    
+  } catch (error) {
+    console.error(' Greška pri CSV exportu:', error);
+    res.status(500).send('Greška pri generiranju CSV datoteke');
+  }
+});
+
+// Pomoćna funkcija za formatiranje CSV vrijednosti
+function formatForCsv(value) {
+  if (value === null || value === undefined) return '';
+  
+  if (typeof value === 'object') {
+    value = JSON.stringify(value);
+  }
+  
+  value = String(value);
+  value = value.replace(/"/g, '""');
+  
+  if (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r')) {
+    value = `"${value}"`;
+  }
+  
+  return value;
+}
+
+// JSON export s albumima 
+app.get('/export/json', requiresAuth(), async (req, res) => {
+  try {
+    // Koristimo isti query kao za CSV
+    const query = `
+      SELECT 
+        p.*,
+        json_agg(
+          json_build_object(
+            'id', a.id,
+            'naziv_albuma', a.naziv_albuma,
+            'godina_izdanja', a.godina_izdanja,
+            'izdavacka_kuca', a.izdavacka_kuca,
+            'broj_pjesama', a.broj_pjesama,
+            'trajanje_minuta', a.trajanje_minuta
+          )
+        ) as albumi
+      FROM pjevaci p
+      LEFT JOIN albumi a ON p.id = a.pjevac_id
+      GROUP BY p.id
+      ORDER BY p.ime_prezime
+    `;
+    
+    const result = await pool.query(query);
+    const data = result.rows;
+    
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="pjevaci_s_albumima.json"');
+    res.json(data);
+    
+    console.log(` JSON export uspješan: ${data.length} pjevača`);
+    
+  } catch (error) {
+    console.error(' Greška pri JSON exportu:', error);
+    res.status(500).json({ error: 'Greška pri generiranju JSON datoteke' });
+  }
+});
+
+
+//----------------------------------------------------------------------------------------------------------------------------------------------------------------
+app.get('/api/pjevaci', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        p.*,
+        json_agg(
+          json_build_object(
+            'id', a.id,
+            'naziv_albuma', a.naziv_albuma,
+            'godina_izdanja', a.godina_izdanja,
+            'izdavacka_kuca', a.izdavacka_kuca,
+            'trajanje_minuta', a.trajanje_minuta,
+            'broj_pjesama', a.broj_pjesama
+          )
+        ) as albumi
+      FROM pjevaci p
+      LEFT JOIN albumi a ON p.id = a.pjevac_id
+      GROUP BY p.id
+      ORDER BY p.ime_prezime
+    `;
+    
+    const result = await pool.query(query);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching data:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 app.get('/api/v1/pjevaci', async (req, res) => {
   try {
@@ -50,10 +336,42 @@ app.get('/api/v1/pjevaci', async (req, res) => {
 
     const result = await pool.query(query);
 
+    // - kreiranje JSON-LD verzije podataka
+    const jsonLdData = {
+      "@context": "https://schema.org",
+      "@type": "ItemList",
+      "name": "Pop pjevači",
+      "description": "Lista pop pjevača s podacima o albumima",
+      "numberOfItems": result.rows.length,
+      "itemListElement": result.rows.map((pjevac, index) => ({
+        "@type": "ListItem",
+        "position": index + 1,
+        "item": {
+          "@type": "Person",
+          "name": pjevac.ime_prezime,
+          "givenName": pjevac.ime_prezime?.split(' ')[0] || pjevac.ime_prezime,
+          "birthPlace": pjevac.mjesto_rodjenja ? {
+            "@type": "Place",
+            "name": pjevac.mjesto_rodjenja
+          } : undefined,
+          "birthDate": pjevac.datum_rodjenja,
+          "nationality": pjevac.drzava_podrijetla ? {
+            "@type": "Country",
+            "name": pjevac.drzava_podrijetla
+          } : undefined,
+          "genre": pjevac.zanr,
+          "award": pjevac.broj_nagrada ? `Osvojio ${pjevac.broj_nagrada} nagrada` : undefined,
+          "description": `${pjevac.ime_prezime} je ${pjevac.zanr} pjevač iz ${pjevac.drzava_podrijetla || 'nepoznate države'}`
+        }
+      }))
+    };
+
+    
     res.status(200).json({
       status: "OK",
       message: "Fetched all singers",
-      response: result.rows
+      response: result.rows,
+      jsonLd: jsonLdData
     });
   } catch (error) {
     console.error('Error fetching singers:', error);
@@ -459,14 +777,6 @@ app.delete('/api/v1/pjevaci/:id', async (req, res) => {
   }
 });
 //---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-
-app.get('/datatable', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'datatable.html'));
-});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
