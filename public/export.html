@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Export podataka</title>
+    <style>
+        body { 
+            font-family: Arial; 
+            padding: 20px; 
+            max-width: 400px; 
+            margin: 0 auto; 
+            text-align: center;
+        }
+        h1 { 
+            color: #e0218a; 
+            margin-bottom: 30px;
+        }
+        .btn { 
+            display: block; 
+            width: 100%; 
+            margin: 15px 0; 
+            padding: 15px; 
+            text-decoration: none; 
+            border-radius: 5px;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        .btn:hover { 
+            opacity: 0.9; 
+        }
+        .csv-btn { 
+            background: #27ae60; 
+            color: white; 
+        }
+        .json-btn { 
+            background: #2980b9; 
+            color: white; 
+        }
+        .back { 
+            display: inline-block; 
+            margin-top: 30px; 
+            color: #666; 
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <h1> Export podataka</h1>
+    <p>Preuzmite najnovije podatke iz baze:</p>
+    
+    <a href="/export/csv" class="btn csv-btn">
+         Preuzmi CSV datoteku
+    </a>
+    
+    <a href="/export/json" class="btn json-btn">
+         Preuzmi JSON datoteku
+    </a>
+    
+    <a href="/home" class="back">← Natrag na početnu</a>
+</body>
+</html>

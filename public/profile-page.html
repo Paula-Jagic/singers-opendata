@@ -1,0 +1,32 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Profil</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        h1 { color: #333; }
+        .info { margin: 10px 0; padding: 10px; background: #f0f0f0; }
+    </style>
+</head>
+<body>
+    <h1>Podaci iz OpenID objekta</h1>
+    <div id="profile-data">
+        Učitavanje...
+    </div>
+    <a href="/home">← Natrag</a>
+    
+    <script>
+        fetch('/api/profile-data')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('profile-data').innerHTML = `
+                    <div class="info"><strong>Ime:</strong> ${data.user.name}</div>
+                    <div class="info"><strong>Email:</strong> ${data.user.email}</div>
+                    <div class="info"><strong>Nadimak:</strong> ${data.user.nickname}</div>
+                    <div class="info"><strong>ID:</strong> ${data.user.sub}</div>
+                `;
+            });
+    </script>
+</body>
+</html>
